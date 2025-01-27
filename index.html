@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salary Calculator</title>
+    <!-- Link to the CSS file in the static folder -->
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Salary Calculator</h1>
+
+        <!-- Section to display messages -->
+        <div id="message" style="margin-bottom: 20px; color: green;"></div>
+
+        <!-- Stopwatch and real-time salary display -->
+        <div style="margin-bottom: 20px;">
+            <p>Stopwatch: <span id="stopwatch">00:00:00</span></p>
+            <p>Earned Salary: <span id="earnedSalary">$0.00</span></p>
+        </div>
+
+        <!-- Buttons for API actions -->
+        <button onclick="startShift()">Start Shift</button>
+        <button onclick="stopShift()">Stop Shift</button>
+        <button onclick="resetCalculator()">Reset Calculator</button>
+
+        <!-- Input field to set the hourly rate -->
+        <div style="margin: 20px 0;">
+            <label for="hourlyRate">Set Hourly Rate:</label>
+            <input type="number" id="hourlyRate" placeholder="Enter hourly rate" />
+            <button onclick="setHourlyRate()">Update Rate</button>
+        </div>
+    </div>
+
+    <!-- JavaScript to handle API requests and real-time updates -->
+    <script>
+        const apiUrl = "http://127.0.0.1:5000";
+        let stopwatchInterval = null;
+        let elapsedTime = 0;
+
+        function displayMessage(message, isError = false) {
+            const messageDiv = document.getElementById("message");
+            messageDiv.style.color = isError ? "red" : "green";
+            messageDiv.textContent = message;
+
+            // Clear the message after 3 seconds
+            setTimeout(() => {
+                messageDiv.textContent = "";
+            }, 10000);
+        }
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const mins = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+
+        function updateStopwatch() {
+            const stopwatch = document.getElementById("stopwatch");
+            stopwatch.textContent = formatTime(elapsedTime);
+        }
+
+        function startStopwatch() {
+            if (!stopwatchInterval) {
+                stopwatchInterval = setInterval(() => {
+                    elapsedTime++;
+                    updateStopwatch();
+                    updateSalary();
+                }, 1000);
+            }
+        }
+
+        function stopStopwatch() {
+            clearInterval(stopwatchInterval);
+            stopwatchInterval = null;
+        }
+
+        async function updateSalary() {
+            try {
+                const response = await fetch(`${apiUrl}/get_salary`);
+                const data = await response.json();
+                if (response.ok) {
+                    const salaryElement = document.getElementById("earnedSalary");
+                    salaryElement.textContent = data.earned_salary;
+                } else {
+                    displayMessage(data.error, true);
+                }
+            } catch (error) {
+                displayMessage("Failed to fetch salary!", true);
+            }
+        }
+
+        async function startShift() {
+            try {
+                const response = await fetch(`${apiUrl}/start`, { method: "POST" });
+                const data = await response.json();
+                if (response.ok) {
+                    displayMessage(data.message);
+                    elapsedTime = 0; // Reset the stopwatch
+                    startStopwatch(); // Start the stopwatch
+                } else {
+                    displayMessage(data.error, true);
+                }
+            } catch (error) {
+                displayMessage("Failed to start shift!", true);
+            }
+        }
+
+        async function stopShift() {
+            try {
+                const response = await fetch(`${apiUrl}/stop`, { method: "POST" });
+                const data = await response.json();
+                if (response.ok) {
+                    displayMessage(data.message);
+                    stopStopwatch(); // Stop the stopwatch
+                } else {
+                    displayMessage(data.error, true);
+                }
+            } catch (error) {
+                displayMessage("Failed to stop shift!", true);
+            }
+        }
+
+        async function resetCalculator() {
+            try {
+                const response = await fetch(`${apiUrl}/reset`, { method: "POST" });
+                const data = await response.json();
+                if (response.ok) {
+                    displayMessage(data.message);
+                    elapsedTime = 0; // Reset the stopwatch
+                    updateStopwatch();
+                    document.getElementById("earnedSalary").textContent = "$0.00";
+                    stopStopwatch(); // Stop the stopwatch
+                } else {
+                    displayMessage(data.error, true);
+                }
+            } catch (error) {
+                displayMessage("Failed to reset calculator!", true);
+            }
+        }
+
+        async function setHourlyRate() {
+            const hourlyRate = document.getElementById("hourlyRate").value;
+            if (!hourlyRate) {
+                displayMessage("Please enter a valid hourly rate!", true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/set_rate`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ hourly_rate: parseFloat(hourlyRate) }),
+                });
+                const data = await response.json();
+                displayMessage(data.message || data.error, !response.ok);
+            } catch (error) {
+                displayMessage("Failed to update hourly rate!", true);
+            }
+        }
+    </script>
+</body>
+</html>
