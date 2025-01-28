@@ -35,7 +35,7 @@
 
     <!-- JavaScript to handle API requests and real-time updates -->
     <script>
-        const apiUrl = "http://127.0.0.1:5000";
+        const apiUrl = "http://127.0.0.1:5000";  // Ensure backend is running at this address
         let stopwatchInterval = null;
         let elapsedTime = 0;
 
@@ -44,7 +44,7 @@
             messageDiv.style.color = isError ? "red" : "green";
             messageDiv.textContent = message;
 
-            // Clear the message after 3 seconds
+            // Clear the message after 10 seconds
             setTimeout(() => {
                 messageDiv.textContent = "";
             }, 10000);
@@ -58,8 +58,7 @@
         }
 
         function updateStopwatch() {
-            const stopwatch = document.getElementById("stopwatch");
-            stopwatch.textContent = formatTime(elapsedTime);
+            document.getElementById("stopwatch").textContent = formatTime(elapsedTime);
         }
 
         function startStopwatch() {
@@ -82,10 +81,9 @@
                 const response = await fetch(`${apiUrl}/get_salary`);
                 const data = await response.json();
                 if (response.ok) {
-                    const salaryElement = document.getElementById("earnedSalary");
-                    salaryElement.textContent = data.earned_salary;
+                    document.getElementById("earnedSalary").textContent = `$${data.earned_salary}`;
                 } else {
-                    displayMessage(data.error, true);
+                    displayMessage(data.error || "Failed to update salary!", true);
                 }
             } catch (error) {
                 displayMessage("Failed to fetch salary!", true);
@@ -94,50 +92,66 @@
 
         async function startShift() {
             try {
-                const response = await fetch(`${apiUrl}/start`, { method: "POST" });
+                const response = await fetch(`${apiUrl}/start`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({})  // Prevent empty-body issues
+                });
+
                 const data = await response.json();
                 if (response.ok) {
                     displayMessage(data.message);
-                    elapsedTime = 0; // Reset the stopwatch
-                    startStopwatch(); // Start the stopwatch
+                    elapsedTime = 0;
+                    startStopwatch();
                 } else {
-                    displayMessage(data.error, true);
+                    displayMessage(data.error || "Failed to start shift!", true);
                 }
             } catch (error) {
-                displayMessage("Failed to start shift!", true);
+                displayMessage("Error: Could not connect to server!", true);
+                console.error(error);
             }
         }
 
         async function stopShift() {
             try {
-                const response = await fetch(`${apiUrl}/stop`, { method: "POST" });
+                const response = await fetch(`${apiUrl}/stop`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+
                 const data = await response.json();
                 if (response.ok) {
                     displayMessage(data.message);
-                    stopStopwatch(); // Stop the stopwatch
+                    stopStopwatch();
                 } else {
-                    displayMessage(data.error, true);
+                    displayMessage(data.error || "Failed to stop shift!", true);
                 }
             } catch (error) {
-                displayMessage("Failed to stop shift!", true);
+                displayMessage("Error: Could not connect to server!", true);
+                console.error(error);
             }
         }
 
         async function resetCalculator() {
             try {
-                const response = await fetch(`${apiUrl}/reset`, { method: "POST" });
+                const response = await fetch(`${apiUrl}/reset`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" }
+                });
+
                 const data = await response.json();
                 if (response.ok) {
                     displayMessage(data.message);
-                    elapsedTime = 0; // Reset the stopwatch
+                    elapsedTime = 0;
                     updateStopwatch();
                     document.getElementById("earnedSalary").textContent = "$0.00";
-                    stopStopwatch(); // Stop the stopwatch
+                    stopStopwatch();
                 } else {
-                    displayMessage(data.error, true);
+                    displayMessage(data.error || "Failed to reset calculator!", true);
                 }
             } catch (error) {
-                displayMessage("Failed to reset calculator!", true);
+                displayMessage("Error: Could not connect to server!", true);
+                console.error(error);
             }
         }
 
@@ -151,15 +165,14 @@
             try {
                 const response = await fetch(`${apiUrl}/set_rate`, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ hourly_rate: parseFloat(hourlyRate) }),
                 });
                 const data = await response.json();
                 displayMessage(data.message || data.error, !response.ok);
             } catch (error) {
                 displayMessage("Failed to update hourly rate!", true);
+                console.error(error);
             }
         }
     </script>
