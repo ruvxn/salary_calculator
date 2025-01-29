@@ -1,20 +1,20 @@
 from flask import Flask, jsonify, request, render_template
+from flask_cors import CORS  # Import CORS
 from salarycalc import SalaryCalculator
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Initialize the SalaryCalculator instance
 calculator = SalaryCalculator(hourly_rate=20)
 
 @app.route('/')
 def home():
-
-    return "Welcome to salary calculator"
+    return "Welcome to Salary Calculator"
 
 @app.route('/start', methods=['POST'])
 def start():
-
     if not calculator.is_running:
         calculator.start_shift()
         return jsonify({"message": "Shift started"}), 200
@@ -23,7 +23,6 @@ def start():
 
 @app.route('/stop', methods=['POST'])
 def stop():
-
     if calculator.is_running:
         calculator.stop_shift()
         return jsonify({
@@ -34,44 +33,32 @@ def stop():
 
 @app.route('/get_salary', methods=['GET'])
 def get_salary():
-
     salary = calculator.get_earned_salary()
     return jsonify({"earned_salary": f"${salary:.2f}"}), 200
 
 @app.route('/reset', methods=['POST'])
 def reset():
-
     calculator.reset()
     return jsonify({"message": "Calculator has been reset"}), 200
 
 @app.route('/set_rate', methods=['POST'])
 def set_rate():
-
-    # Get the JSON payload from the request
     data = request.get_json()
 
-    # Validate the input
     if not data or 'hourly_rate' not in data:
-        # Return error if input is missing or invalid
         return jsonify({"error": "Invalid input. Provide 'hourly_rate'"}), 400
 
     try:
-        # Convert the input to a float and update the calculator
         new_rate = float(data['hourly_rate'])
-        calculator.hourly_rate = new_rate  # Update hourly rate
-        calculator.pay_per_second = new_rate / 3600  # Update pay per second
-
-        # Return success message
+        calculator.hourly_rate = new_rate
+        calculator.pay_per_second = new_rate / 3600
         return jsonify({"message": f"Hourly rate updated to ${new_rate:.2f}"}), 200
     except ValueError:
-        # Handle invalid numbers
         return jsonify({"error": "Invalid rate. Must be a number."}), 400
 
 @app.route('/ui')
 def ui():
-
     return render_template('index.html')
 
-# Run the Flask app
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)  # Allow access from other devices
